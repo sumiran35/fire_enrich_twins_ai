@@ -254,9 +254,38 @@ export class EnrichmentStrategy {
           
           // Check if LLM already provided source context
           if (extracted[fieldName].sourceContext && extracted[fieldName].sourceContext.length > 0) {
-            // Update the URL from 'extracted' to the actual source URL
-            const existingQuote = extracted[fieldName].sourceContext[0].snippet;
-            if (existingQuote && extracted[fieldName].sourceContext[0].url === 'extracted') {
+            // Validate the source context from LLM
+            const llmSourceContext = extracted[fieldName].sourceContext;
+            const validatedContext: typeof llmSourceContext = [];
+            
+            for (const ctx of llmSourceContext) {
+              // Check if the URL is actually from our search results
+              const matchingResult = searchResults.find(r => r.url === ctx.url);
+              if (!matchingResult) {
+                console.log(`[VALIDATION] LLM provided URL not in search results: ${ctx.url}`);
+                continue;
+              }
+              
+              // Verify the snippet actually exists in the content
+              if (ctx.snippet && matchingResult.markdown) {
+                const snippetExists = matchingResult.markdown.toLowerCase().includes(
+                  ctx.snippet.toLowerCase().substring(0, 50)
+                );
+                if (!snippetExists) {
+                  console.log(`[VALIDATION] LLM snippet not found in actual content for ${fieldName}`);
+                  continue;
+                }
+              }
+              
+              validatedContext.push(ctx);
+            }
+            
+            // If we have valid context from LLM, use it
+            if (validatedContext.length > 0) {
+              extracted[fieldName].sourceContext = validatedContext;
+            } else if (extracted[fieldName].sourceContext[0]?.url === 'extracted') {
+              // Handle legacy 'extracted' URL case
+              const existingQuote = extracted[fieldName].sourceContext[0].snippet;
               const blockedDomains = ['linkedin.com', 'facebook.com', 'twitter.com', 'instagram.com'];
               const filteredResults = searchResults.filter(result => {
                 try {
@@ -285,6 +314,9 @@ export class EnrichmentStrategy {
                   snippet: existingQuote
                 }];
               }
+            } else {
+              // No valid context from LLM, fall back to finding snippets
+              extracted[fieldName].sourceContext = undefined;
             }
           } else {
             // Fallback to finding snippets if LLM didn't provide them

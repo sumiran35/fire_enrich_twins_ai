@@ -171,6 +171,7 @@ Confidence scores:
 2. Set confidence to 0.0 if not found
 3. For the sources array, include EACH source that mentions the information
 4. IMPORTANT: Each source must have its OWN unique quote from that specific URL - extract the actual text from each source
+5. CRITICAL: Only use URLs that are explicitly listed in the content after "URL:" - do NOT create or modify URLs
 
 **EXAMPLE**:
 If you're looking for info about "Example Corp" and the content contains:
@@ -399,6 +400,11 @@ DOMAIN PARKING/SALE PAGES:
     - Industry names should be capitalized (e.g., "Technology", "Healthcare", "Finance")
     - Company names should use proper casing (e.g., "OneTrust" not "onetrust")
     - Job titles should be capitalized (e.g., "Chief Executive Officer", "VP of Sales")
+13. **CRITICAL URL VALIDATION**:
+    - ONLY use URLs that appear after "URL:" in the content
+    - DO NOT invent or guess URLs
+    - DO NOT modify or create URLs based on company names
+    - If you extract data but can't find which URL it came from, use the URL that appears closest before that content
 
 **CRITICAL REQUIREMENT FOR exact_text**:
 - The exact_text MUST be a complete sentence or paragraph from the content that contains the value
@@ -464,7 +470,20 @@ Example format for employee count:
   }
 }
 
-REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NOT from the "[PAGE TITLE - NOT CONTENT]" line!`
+REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NOT from the "[PAGE TITLE - NOT CONTENT]" line!
+
+**CRITICAL URL EXTRACTION RULES**:
+1. ONLY use URLs that appear in the content after "URL:" 
+2. DO NOT create URLs based on company names
+3. DO NOT modify URLs from the content
+4. DO NOT guess or infer URLs
+5. If you see "URL: https://example.com/about" in the content, use EXACTLY "https://example.com/about"
+6. If no URL is found for a piece of evidence, set source_url to null
+7. Common fake URL patterns to AVOID:
+   - https://[companyname].com
+   - https://www.[companyname].com  
+   - https://companywebsite.com
+   - Any URL with brackets or placeholders`
           },
           {
             role: 'user',
@@ -510,6 +529,25 @@ REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NO
               return false;
             }
             
+            // Validate URL format and common hallucination patterns
+            if (e.source_url) {
+              try {
+                const url = new URL(e.source_url);
+                // Check for obviously fake URLs
+                if (url.hostname === 'example.com' || 
+                    url.hostname === 'companywebsite.com' ||
+                    url.hostname === 'website.com' ||
+                    url.hostname.includes('[') ||
+                    url.hostname.includes('{')) {
+                  console.log(`[VALIDATION] Rejecting hallucinated URL for ${field.name}: ${e.source_url}`);
+                  return false;
+                }
+              } catch {
+                console.log(`[VALIDATION] Rejecting invalid URL for ${field.name}: ${e.source_url}`);
+                return false;
+              }
+            }
+            
             // More robust title detection
             const textLower = e.exact_text ? e.exact_text.toLowerCase() : '';
             const hasSentenceEnding = /[.!?]/.test(e.exact_text);
@@ -552,7 +590,17 @@ REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NO
               /dedicated to providing exceptional/i,
               /committed to excellence/i,
               /industry-leading platform/i,
-              /state-of-the-art technology/i
+              /state-of-the-art technology/i,
+              /revolutionizing the way/i,
+              /empowering businesses to/i,
+              /leveraging cutting-edge/i,
+              /comprehensive suite of/i,
+              /seamlessly integrat/i,
+              /innovative approach to/i,
+              /next-generation platform/i,
+              /world-class solutions/i,
+              /best-in-class/i,
+              /game-changing/i
             ];
             
             const looksLikeHallucination = hallucationPatterns.some(pattern => pattern.test(e.exact_text));
@@ -622,7 +670,7 @@ REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NO
               let adjustedConfidence = fieldData.consensus_confidence;
               if (validSourceContext.length === 0) {
                 console.log(`[CONFIDENCE] No valid evidence for ${field.name}, reducing confidence from ${adjustedConfidence} to 0.1`);
-                adjustedConfidence = Math.min(adjustedConfidence, 0.1);
+                adjustedConfidence = 0.1; // Force low confidence when no valid evidence
               }
               
               const enrichmentResult: EnrichmentResult = {
