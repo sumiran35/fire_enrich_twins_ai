@@ -504,6 +504,12 @@ REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NO
             // Basic validation
             if (e.value === null || e.confidence < 0.2) return false;
             
+            // CRITICAL: Reject empty or missing evidence text
+            if (!e.exact_text || e.exact_text.trim() === '') {
+              console.log(`[VALIDATION] Rejecting evidence with no text for ${field.name}`);
+              return false;
+            }
+            
             // More robust title detection
             const textLower = e.exact_text ? e.exact_text.toLowerCase() : '';
             const hasSentenceEnding = /[.!?]/.test(e.exact_text);
@@ -535,6 +541,26 @@ REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NO
               return false;
             }
             
+            // Check for common hallucination patterns
+            const hallucationPatterns = [
+              /with the mission to revolutionize/i,
+              /founded in \d{4} with the mission/i,
+              /leading provider of innovative solutions/i,
+              /cutting-edge technology company/i,
+              /transforming the industry/i,
+              /pioneering solutions/i,
+              /dedicated to providing exceptional/i,
+              /committed to excellence/i,
+              /industry-leading platform/i,
+              /state-of-the-art technology/i
+            ];
+            
+            const looksLikeHallucination = hallucationPatterns.some(pattern => pattern.test(e.exact_text));
+            if (looksLikeHallucination) {
+              console.log(`[VALIDATION] Detected potential hallucination pattern in ${field.name}:`, e.exact_text);
+              return false;
+            }
+            
             // Validate that the snippet actually contains the value
             const isValid = validateSnippetContainsValue(e.exact_text, e.value as string | number | boolean | string[]);
             if (!isValid) {
@@ -546,6 +572,12 @@ REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NO
             return isValid;
           }
         );
+        
+        // CRITICAL: Only proceed if we have actual valid evidence
+        if (validEvidence.length === 0) {
+          console.log(`[VALIDATION] No valid evidence found for ${field.name}, skipping field`);
+          return;
+        }
         
         if (validEvidence.length > 0 && fieldData.consensus_confidence > 0.2) {
           // Validate the consensus value - filter out invalid values like "/"
@@ -586,10 +618,17 @@ REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NO
             
             // Only include the field if we have valid source context OR if we have a value without context
             if (validSourceContext.length > 0 || consensusValue !== null) {
+              // CRITICAL: Reduce confidence if we have no valid evidence
+              let adjustedConfidence = fieldData.consensus_confidence;
+              if (validSourceContext.length === 0) {
+                console.log(`[CONFIDENCE] No valid evidence for ${field.name}, reducing confidence from ${adjustedConfidence} to 0.1`);
+                adjustedConfidence = Math.min(adjustedConfidence, 0.1);
+              }
+              
               const enrichmentResult: EnrichmentResult = {
                 field: field.name,
                 value: consensusValue,
-                confidence: fieldData.consensus_confidence,
+                confidence: adjustedConfidence,
                 source: validEvidence.map((e: { source_url: string }) => e.source_url).join(', '),
                 sourceContext: validSourceContext,
                 corroboration: {
