@@ -611,7 +611,7 @@ export function EnrichmentTable({ rows, fields, emailColumn }: EnrichmentTablePr
               
               return (
                 <tr key={index} className={`
-                  ${isProcessing ? 'bg-gradient-to-r from-orange-50 to-yellow-50 animate-pulse' : 
+                  ${isProcessing ? 'animate-processing-row' : 
                     index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} 
                   hover:bg-orange-50/50 transition-all duration-300 group
                 `}>

@@ -71,52 +71,52 @@ Let's see exactly how Fire Enrich processes a real example - enriching data for 
 
 ```mermaid
 graph TD
-    Start["Input - ericciarla@firecrawl.dev<br/>Selected fields - Industry, CEO,<br/>Funding Stage, Tech Stack"]:::primary
+    Start["Input: ericciarla@firecrawl.dev | Selected fields: Industry, CEO, Funding Stage, Tech Stack"]:::primary
     
-    Start -->|1. Extract Domain| Domain["Domain - firecrawl.dev<br/>Corporate email detected"]:::primary
+    Start -->|1. Extract Domain| Domain["Domain: firecrawl.dev | Corporate email detected"]:::primary
     
-    Domain -->|2. Start Orchestration| Orchestrator["Agent Orchestrator<br/>Executes agents in optimized sequence<br/>Each phase builds on previous data"]:::synthesis
+    Domain -->|2. Start Orchestration| Orchestrator["Agent Orchestrator | Executes agents in optimized sequence | Each phase builds on previous data"]:::synthesis
 
     %% Phase 1: Discovery
-    Orchestrator -->|Phase 1| Discovery["Discovery Agent<br/>Finds basic company info first"]:::agent
+    Orchestrator -->|Phase 1| Discovery["Discovery Agent | Finds basic company info first"]:::agent
     
-    Discovery -->|Parallel searches| DiscSearch["Parallel Searches -<br/>'Firecrawl company'<br/>'firecrawl.dev'<br/>'What is Firecrawl'"]:::search
+    Discovery -->|Parallel searches| DiscSearch["Parallel Searches: 'Firecrawl company' | 'firecrawl.dev' | 'What is Firecrawl'"]:::search
     
-    DiscSearch -->|Firecrawl API| DiscFC["3 concurrent API calls<br/>Returns company website &<br/>basic information"]:::firecrawl
+    DiscSearch -->|Firecrawl API| DiscFC["3 concurrent API calls | Returns company website & basic information"]:::firecrawl
     
-    DiscFC -->|Extracts| DiscData["Company - Firecrawl<br/>Website - firecrawl.dev<br/>Type - B2B SaaS"]:::source
+    DiscFC -->|Extracts| DiscData["Company: Firecrawl | Website: firecrawl.dev | Type: B2B SaaS"]:::source
 
     %% Phase 2: Company Profile (Industry)
-    DiscData -->|Phase 2| Profile["Company Profile Agent<br/>Uses company name from Phase 1<br/>to find industry details"]:::agent
+    DiscData -->|Phase 2| Profile["Company Profile Agent | Uses company name from Phase 1 to find industry details"]:::agent
     
-    Profile -->|Parallel searches| ProfSearch["Parallel Searches -<br/>'Firecrawl industry classification'<br/>'Firecrawl web scraping API'<br/>'Developer tools Firecrawl'"]:::search
+    Profile -->|Parallel searches| ProfSearch["Parallel Searches: 'Firecrawl industry classification' | 'Firecrawl web scraping API' | 'Developer tools Firecrawl'"]:::search
     
-    ProfSearch -->|Firecrawl API| ProfFC["3 concurrent API calls<br/>Searches industry-specific sources"]:::firecrawl
+    ProfSearch -->|Firecrawl API| ProfFC["3 concurrent API calls | Searches industry-specific sources"]:::firecrawl
     
-    ProfFC -->|Extracts| ProfData["Industry - Developer Tools<br/>Sub-category - Web Scraping APIs<br/>Market - B2B SaaS"]:::source
+    ProfFC -->|Extracts| ProfData["Industry: Developer Tools | Sub-category: Web Scraping APIs | Market: B2B SaaS"]:::source
 
     %% Phase 3: Financial (Funding)
-    ProfData -->|Phase 3| Funding["Financial Intel Agent<br/>Searches for funding using<br/>company + industry context"]:::agent
+    ProfData -->|Phase 3| Funding["Financial Intel Agent | Searches for funding using company + industry context"]:::agent
     
-    Funding -->|Parallel searches| FundSearch["Parallel Searches -<br/>'Firecrawl funding rounds'<br/>'Mendable AI acquisition Firecrawl'<br/>'Firecrawl investors crunchbase'"]:::search
+    Funding -->|Parallel searches| FundSearch["Parallel Searches: 'Firecrawl funding rounds' | 'Mendable AI acquisition Firecrawl' | 'Firecrawl investors crunchbase'"]:::search
     
-    FundSearch -->|Firecrawl API| FundFC["3 concurrent API calls<br/>Checks TechCrunch, Crunchbase,<br/>venture news sites"]:::firecrawl
+    FundSearch -->|Firecrawl API| FundFC["3 concurrent API calls | Checks TechCrunch, Crunchbase, venture news sites"]:::firecrawl
     
-    FundFC -->|Extracts| FundData["Funding - Seed Stage<br/>Part of Mendable AI<br/>YC-backed company"]:::source
+    FundFC -->|Extracts| FundData["Funding: Seed Stage | Part of Mendable AI | YC-backed company"]:::source
 
     %% Phase 4: Tech Stack
-    FundData -->|Phase 4| Tech["Tech Stack Agent<br/>Analyzes GitHub & tech docs<br/>+ HTML source analysis"]:::agent
+    FundData -->|Phase 4| Tech["Tech Stack Agent | Analyzes GitHub & tech docs + HTML source analysis"]:::agent
     
-    Tech -->|Parallel searches| TechSearch["Parallel Searches -<br/>'github.com/mendableai/firecrawl'<br/>'Firecrawl API documentation'<br/>Direct HTML analysis of firecrawl.dev"]:::search
+    Tech -->|Parallel searches| TechSearch["Parallel Searches: 'github.com/mendableai/firecrawl' | 'Firecrawl API documentation' | Direct HTML analysis of firecrawl.dev"]:::search
     
-    TechSearch -->|Firecrawl API| TechFC["3 concurrent API calls<br/>+ HTML meta tag analysis<br/>+ GitHub repo scan"]:::firecrawl
+    TechSearch -->|Firecrawl API| TechFC["3 concurrent API calls + HTML meta tag analysis + GitHub repo scan"]:::firecrawl
     
-    TechFC -->|Extracts| TechData["Tech Stack -<br/>Node.js, Python, Redis<br/>Playwright, Kubernetes"]:::source
+    TechFC -->|Extracts| TechData["Tech Stack: Node.js, Python, Redis, Playwright, Kubernetes"]:::source
 
     %% Phase 5: General (CEO)
-    TechData -->|Phase 5| General["General Purpose Agent<br/>Handles custom field - CEO<br/>Uses all previous context"]:::agent
+    TechData -->|Phase 5| General["General Purpose Agent | Handles custom field: CEO | Uses all previous context"]:::agent
     
-    General -->|Targeted search| GenSearch["Focused Search -<br/>'Firecrawl CEO founder Eric'<br/>'Eric Ciarla Firecrawl'<br/>LinkedIn company search"]:::search
+    General -->|Targeted search| GenSearch["Focused Search: 'Firecrawl CEO founder Eric' | 'Eric Ciarla Firecrawl' | LinkedIn company search"]:::search
     
     GenSearch -->|Firecrawl API| GenFC["3 concurrent API calls<br/>Cross-references multiple sources"]:::firecrawl
     

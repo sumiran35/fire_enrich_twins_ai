@@ -280,6 +280,23 @@
   animation: slow-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Very slow pulse animation for processing rows */
+@keyframes processing-row-pulse {
+  0%, 100% {
+    opacity: 1;
+    background-color: rgb(254 243 199 / 0.5); /* from-orange-50 */
+  }
+  50% {
+    opacity: 0.85;
+    background-color: rgb(254 249 195 / 0.7); /* to-yellow-50 */
+  }
+}
+
+.animate-processing-row {
+  animation: processing-row-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background: linear-gradient(to right, rgb(254 243 199 / 0.5), rgb(254 249 195 / 0.5));
+}
+
 /* New animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
