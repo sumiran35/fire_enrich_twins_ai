@@ -71,7 +71,7 @@ Let's see exactly how Fire Enrich processes a real example - enriching data for 
 
 ```mermaid
 graph TD
-    Start["Input: ericciarla@firecrawl.dev<br/>Selected fields: Industry, CEO, Funding Stage, Tech Stack"]:::primary
+    Start["Input: ericciarla@firecrawl.dev Selected fields: Industry, CEO, Funding Stage, Tech Stack"]:::primary
     
     Start -->|1. Extract Domain| Domain["Domain: firecrawl.dev<br/>Corporate email detected"]:::primary
     
