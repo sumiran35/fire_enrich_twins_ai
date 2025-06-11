@@ -7,6 +7,7 @@ interface SourceContextTooltipProps {
   sources: Array<{
     url: string;
     snippet: string;
+    confidence?: number;
   }>;
   value: string | number | boolean | string[];
   legacySource?: string;
@@ -20,9 +21,10 @@ interface SourceContextTooltipProps {
     }>;
     sources_agree: boolean;
   };
+  confidence?: number;
 }
 
-export function SourceContextTooltip({ sources, legacySource, sourceCount, corroboration }: SourceContextTooltipProps) {
+export function SourceContextTooltip({ sources, legacySource, sourceCount, corroboration, confidence }: SourceContextTooltipProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -124,9 +126,27 @@ export function SourceContextTooltip({ sources, legacySource, sourceCount, corro
           }}>
           
           <div className="mb-2 pb-2 border-b border-gray-100">
-            <h4 className="text-xs font-semibold text-gray-700">
-              Found in {displaySources.length} {displaySources.length === 1 ? 'source' : 'sources'}
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-gray-700">
+                Found in {displaySources.length} {displaySources.length === 1 ? 'source' : 'sources'}
+              </h4>
+              {confidence && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  confidence >= 0.8 ? 'bg-green-100 text-green-700' :
+                  confidence >= 0.5 ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-red-100 text-red-700'
+                }`}>
+                  {Math.round(confidence * 100)}% confident
+                </span>
+              )}
+            </div>
+            {corroboration && (
+              <p className={`text-xs mt-1 ${
+                corroboration.sources_agree ? 'text-green-600' : 'text-amber-600'
+              }`}>
+                Sources {corroboration.sources_agree ? 'agree' : 'have different values'}
+              </p>
+            )}
           </div>
           
           <div className="max-h-64 overflow-y-auto space-y-3">

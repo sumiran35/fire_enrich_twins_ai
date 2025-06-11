@@ -398,13 +398,48 @@ DOMAIN PARKING/SALE PAGES:
 12. ALWAYS capitalize fields properly:
     - Industry names should be capitalized (e.g., "Technology", "Healthcare", "Finance")
     - Company names should use proper casing (e.g., "OneTrust" not "onetrust")
-    - Job titles should be capitalized (e.g., "Chief Executive Officer", "VP of Sales")${customInstructions}
+    - Job titles should be capitalized (e.g., "Chief Executive Officer", "VP of Sales")
+
+**CRITICAL REQUIREMENT FOR exact_text**:
+- The exact_text MUST be a complete sentence or paragraph from the content that contains the value
+- The exact_text MUST contain the actual value you're extracting
+- If extracting "150 employees", the exact_text must contain "150" and "employees"
+- If extracting "San Francisco, CA", the exact_text must contain "San Francisco"
+- DO NOT include text that merely mentions the field name without the value
+- DO NOT include surrounding context that doesn't contain the value itself
+- The exact_text should typically be 20-200 characters and include proper punctuation
+- The exact_text should read like a natural sentence, not a title or heading
+
+**INVALID EVIDENCE EXAMPLES**:
+- Field: employeeCount, Value: 150
+  - WRONG: "The company has grown significantly in recent years"
+  - WRONG: "Check our careers page for employee information"
+  - WRONG: "About Us - Acme Corp" (this is just a page title)
+  - WRONG: "Acme Corp | Official Website" (this is just a title)
+  - RIGHT: "We now have 150 employees across our offices"
+
+- Field: headquarters, Value: "San Francisco, CA"
+  - WRONG: "We have offices worldwide"
+  - WRONG: "Visit our headquarters page for location"
+  - WRONG: "Contact Us | Acme Corp" (this is just a page title)
+  - RIGHT: "Our headquarters is located in San Francisco, CA"
+
+**CRITICAL**: Do NOT use page titles, headers, or navigation text as exact_text. The exact_text must be from the actual content that contains the value.${customInstructions}
 
 Context about the entity:
 ${contextInfo}
 
 Fields to extract:
 ${fieldDescriptions}
+
+Example of what the content looks like:
+"""
+URL: https://example.com/about
+[PAGE TITLE - NOT CONTENT]: About Us - Example Corp
+
+=== ACTUAL CONTENT BELOW ===
+Example Corp was founded in 2015 in San Francisco, CA. Our team of 150 employees works across 3 offices to deliver innovative solutions...
+"""
 
 Example format for employee count:
 {
@@ -427,7 +462,9 @@ Example format for employee count:
     "consensus_confidence": 0.9,
     "sources_agree": false
   }
-}`
+}
+
+REMEMBER: Extract exact_text from the "=== ACTUAL CONTENT BELOW ===" section, NOT from the "[PAGE TITLE - NOT CONTENT]" line!`
           },
           {
             role: 'user',
@@ -444,6 +481,15 @@ Example format for employee count:
       }
       
       const parsed = JSON.parse(messageContent);
+      
+      // Debug log raw evidence
+      console.log('[OPENAI] Raw corroboration response sample:', {
+        firstField: fields[0]?.name,
+        evidence: parsed[fields[0]?.name]?.evidence?.slice(0, 2)
+      });
+
+      // Import validation function
+      const { validateSnippetContainsValue } = await import('../utils/source-context');
 
       // Transform corroborated data into EnrichmentResult format
       const results: Record<string, EnrichmentResult> = {};
@@ -454,7 +500,51 @@ Example format for employee count:
         
         // Only include if we have actual evidence with good confidence
         const validEvidence = fieldData.evidence.filter(
-          (e: { value: unknown; confidence: number }) => e.value !== null && e.confidence > 0.2
+          (e: { value: unknown; confidence: number; exact_text: string; source_url: string }) => {
+            // Basic validation
+            if (e.value === null || e.confidence < 0.2) return false;
+            
+            // More robust title detection
+            const textLower = e.exact_text ? e.exact_text.toLowerCase() : '';
+            const hasSentenceEnding = /[.!?]/.test(e.exact_text);
+            const wordCount = e.exact_text ? e.exact_text.split(/\s+/).length : 0;
+            
+            const looksLikeTitle = e.exact_text && (
+              // Common title patterns
+              e.exact_text.includes(' | ') ||
+              (e.exact_text.includes(' - ') && !hasSentenceEnding) ||
+              
+              // Keywords that appear in titles/headers
+              textLower.includes('official website') ||
+              textLower.includes('wikipedia') ||
+              textLower.includes('home page') ||
+              
+              // Short text without proper punctuation (likely a heading)
+              (!hasSentenceEnding && wordCount < 15) ||
+              
+              // All caps or title case without sentences
+              (e.exact_text.match(/^[A-Z][^.!?]*$/) && e.exact_text.length < 100) ||
+              
+              // Just a URL or very short
+              e.exact_text === e.source_url ||
+              e.exact_text.length < 20
+            );
+            
+            if (looksLikeTitle) {
+              console.log(`[VALIDATION] Filtering out title-like evidence for ${field.name}:`, e.exact_text);
+              return false;
+            }
+            
+            // Validate that the snippet actually contains the value
+            const isValid = validateSnippetContainsValue(e.exact_text, e.value as string | number | boolean | string[]);
+            if (!isValid) {
+              console.log(`[VALIDATION] Filtering out evidence for ${field.name} - snippet doesn't contain value:`, {
+                value: e.value,
+                snippet: e.exact_text.substring(0, 100) + '...'
+              });
+            }
+            return isValid;
+          }
         );
         
         if (validEvidence.length > 0 && fieldData.consensus_confidence > 0.2) {
@@ -466,20 +556,47 @@ Example format for employee count:
           
           // Only create result if we have a valid value
           if (consensusValue !== null && consensusValue !== undefined && consensusValue !== '') {
-            const enrichmentResult: EnrichmentResult = {
-              field: field.name,
-              value: consensusValue,
-              confidence: fieldData.consensus_confidence,
-              source: validEvidence.map((e: { source_url: string }) => e.source_url).join(', '),
-              sourceContext: validEvidence.map((e: { source_url: string; exact_text: string }) => ({
+            // Filter sourceContext to only include validated evidence
+            const validSourceContext = validEvidence
+              .filter((e: { exact_text: string }) => e.exact_text && e.exact_text.trim() !== '')
+              .map((e: { source_url: string; exact_text: string }) => ({
                 url: e.source_url,
                 snippet: e.exact_text,
-              })),
-              corroboration: {
-                evidence: fieldData.evidence,
-                sources_agree: fieldData.sources_agree,
-              },
-            };
+              }));
+            
+            // Debug log what we're keeping
+            if (validSourceContext.length > 0) {
+              console.log(`[SOURCE-CONTEXT] For ${field.name}, keeping ${validSourceContext.length} sources:`, 
+                validSourceContext.map(sc => ({ url: sc.url, snippet: sc.snippet.substring(0, 50) + '...' }))
+              );
+            }
+            
+            // Final validation - if all snippets look like titles, clear them
+            const allSnippetsAreTitles = validSourceContext.every(sc => {
+              const text = sc.snippet;
+              const hasSentenceEnding = /[.!?]/.test(text);
+              const hasTitle = text.includes(' | ') || (text.includes(' - ') && !hasSentenceEnding);
+              return hasTitle || (!hasSentenceEnding && text.split(/\s+/).length < 15);
+            });
+            
+            if (allSnippetsAreTitles) {
+              console.log(`[VALIDATION] All snippets for ${field.name} look like titles, clearing source context`);
+              validSourceContext.length = 0; // Clear the array
+            }
+            
+            // Only include the field if we have valid source context OR if we have a value without context
+            if (validSourceContext.length > 0 || consensusValue !== null) {
+              const enrichmentResult: EnrichmentResult = {
+                field: field.name,
+                value: consensusValue,
+                confidence: fieldData.consensus_confidence,
+                source: validEvidence.map((e: { source_url: string }) => e.source_url).join(', '),
+                sourceContext: validSourceContext,
+                corroboration: {
+                  evidence: validEvidence, // Only include validated evidence
+                  sources_agree: fieldData.sources_agree,
+                },
+              };
           
             // Additional validation for tech stack fields
             if (field.name.toLowerCase().includes('tech') || field.name.toLowerCase().includes('stack')) {
@@ -527,6 +644,7 @@ Example format for employee count:
             }
             
             results[field.name] = enrichmentResult;
+            }
           }
         }
       });

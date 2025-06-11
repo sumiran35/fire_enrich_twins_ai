@@ -780,6 +780,7 @@ export function EnrichmentTable({ rows, fields, emailColumn }: EnrichmentTablePr
                                     legacySource={enrichment.source}
                                     sourceCount={enrichment.sourceCount}
                                     corroboration={enrichment.corroboration}
+                                    confidence={enrichment.confidence}
                                   />
                                 </div>
                               )}

@@ -300,7 +300,7 @@ export class EnrichmentStrategy {
               })
               .map(result => {
                 const snippet = findRelevantSnippet(
-                  result.markdown || result.description || '',
+                  result.markdown || '', // Only use actual content, not description/title
                   extracted[fieldName].value,
                   fieldName
                 );

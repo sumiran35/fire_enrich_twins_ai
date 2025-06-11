@@ -731,17 +731,32 @@ export class AgentOrchestrator {
         } else {
           // Fallback to finding snippets if LLM didn't provide them
           const { findRelevantSnippet } = await import('../utils/source-context');
+          console.log(`[SOURCE-CONTEXT] Using fallback snippet extraction for ${fieldName}`);
+          
           enrichment.sourceContext = filteredResults.map(r => {
             const snippet = findRelevantSnippet(
               r.markdown || '',
               enrichment.value,
               fieldName
             );
+            
+            if (!snippet) {
+              console.log(`[SOURCE-CONTEXT] No snippet found for ${fieldName} value "${enrichment.value}" in ${r.url}`);
+            }
+            
             return {
               url: r.url,
               snippet
             };
-          }).filter(ctx => ctx.snippet).slice(0, 5);
+          }).filter(ctx => {
+            const hasSnippet = ctx.snippet && ctx.snippet.length > 0;
+            if (!hasSnippet) {
+              console.log(`[SOURCE-CONTEXT] Filtering out empty snippet for ${fieldName} from ${ctx.url}`);
+            }
+            return hasSnippet;
+          }).slice(0, 5);
+          
+          console.log(`[SOURCE-CONTEXT] Final source context for ${fieldName}: ${enrichment.sourceContext.length} sources`);
         }
       }
     }
@@ -872,17 +887,32 @@ export class AgentOrchestrator {
         } else {
           // Fallback to finding snippets if LLM didn't provide them
           const { findRelevantSnippet } = await import('../utils/source-context');
+          console.log(`[SOURCE-CONTEXT] Using fallback snippet extraction for ${fieldName}`);
+          
           enrichment.sourceContext = filteredResults.map(r => {
             const snippet = findRelevantSnippet(
               r.markdown || '',
               enrichment.value,
               fieldName
             );
+            
+            if (!snippet) {
+              console.log(`[SOURCE-CONTEXT] No snippet found for ${fieldName} value "${enrichment.value}" in ${r.url}`);
+            }
+            
             return {
               url: r.url,
               snippet
             };
-          }).filter(ctx => ctx.snippet).slice(0, 5);
+          }).filter(ctx => {
+            const hasSnippet = ctx.snippet && ctx.snippet.length > 0;
+            if (!hasSnippet) {
+              console.log(`[SOURCE-CONTEXT] Filtering out empty snippet for ${fieldName} from ${ctx.url}`);
+            }
+            return hasSnippet;
+          }).slice(0, 5);
+          
+          console.log(`[SOURCE-CONTEXT] Final source context for ${fieldName}: ${enrichment.sourceContext.length} sources`);
         }
       }
     }
@@ -1011,17 +1041,32 @@ export class AgentOrchestrator {
         } else {
           // Fallback to finding snippets if LLM didn't provide them
           const { findRelevantSnippet } = await import('../utils/source-context');
+          console.log(`[SOURCE-CONTEXT] Using fallback snippet extraction for ${fieldName}`);
+          
           enrichment.sourceContext = filteredResults.map(r => {
             const snippet = findRelevantSnippet(
               r.markdown || '',
               enrichment.value,
               fieldName
             );
+            
+            if (!snippet) {
+              console.log(`[SOURCE-CONTEXT] No snippet found for ${fieldName} value "${enrichment.value}" in ${r.url}`);
+            }
+            
             return {
               url: r.url,
               snippet
             };
-          }).filter(ctx => ctx.snippet).slice(0, 5);
+          }).filter(ctx => {
+            const hasSnippet = ctx.snippet && ctx.snippet.length > 0;
+            if (!hasSnippet) {
+              console.log(`[SOURCE-CONTEXT] Filtering out empty snippet for ${fieldName} from ${ctx.url}`);
+            }
+            return hasSnippet;
+          }).slice(0, 5);
+          
+          console.log(`[SOURCE-CONTEXT] Final source context for ${fieldName}: ${enrichment.sourceContext.length} sources`);
         }
       }
     }
@@ -2118,7 +2163,7 @@ IMPORTANT: Only extract information that is clearly about the company associated
     // If under limit, return as is
     if (totalSize <= maxTotalChars) {
       return searchResults
-        .map((r) => `URL: ${r.url}\nTitle: ${r.title || 'No title'}\nContent:\n${r.markdown || r.content || ''}`)
+        .map((r) => `URL: ${r.url}\n[PAGE TITLE - NOT CONTENT]: ${r.title || 'No title'}\n\n=== ACTUAL CONTENT BELOW ===\n${r.markdown || r.content || ''}`)
         .filter(Boolean)
         .join('\n\n---\n\n');
     }
@@ -2136,7 +2181,7 @@ IMPORTANT: Only extract information that is clearly about the company associated
           ? content.substring(0, charsPerResult) + '\n[... content trimmed ...]'
           : content;
         
-        return `URL: ${r.url}\nTitle: ${r.title || 'No title'}\nContent:\n${trimmedContent}`;
+        return `URL: ${r.url}\n[PAGE TITLE - NOT CONTENT]: ${r.title || 'No title'}\n\n=== ACTUAL CONTENT BELOW ===\n${trimmedContent}`;
       })
       .filter(Boolean)
       .join('\n\n---\n\n');
