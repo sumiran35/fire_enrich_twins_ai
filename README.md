@@ -154,7 +154,6 @@ graph TD
     classDef good fill:#f5f5f5,stroke:#666,stroke-width:1px,color:#000
     classDef answer fill:#333,stroke:#000,stroke-width:3px,color:#fff
 ```
-```
 
 ### How Each Agent Works
 
