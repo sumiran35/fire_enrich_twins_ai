@@ -70,9 +70,6 @@ Turn a simple list of emails into a rich dataset with company profiles, funding 
 Let's see exactly how Fire Enrich processes a real example - enriching data for the email ericciarla@firecrawl.dev.
 
 ```mermaid
-# Email Enrichment Flow - GitHub Compatible
-
-```mermaid
 graph TD
     Start["Input: ericciarla@firecrawl.dev - Industry, CEO, Funding Stage, Tech Stack"]:::primary
     
