@@ -71,56 +71,56 @@ Let's see exactly how Fire Enrich processes a real example - enriching data for 
 
 ```mermaid
 graph TD
-    Start["Input: ericciarla@firecrawl.dev Selected fields: Industry, CEO, Funding Stage, Tech Stack"]:::primary
+    Start["Input: ericciarla@firecrawl.dev<br/>Selected fields: Industry, CEO, Funding Stage, Tech Stack"]
     
-    Start -->|1. Extract Domain| Domain["Domain: firecrawl.dev<br/>Corporate email detected"]:::primary
+    Start -->|1. Extract Domain| Domain["Domain: firecrawl.dev<br/>Corporate email detected"]
     
-    Domain -->|2. Start Orchestration| Orchestrator["Agent Orchestrator<br/>Executes agents in optimized sequence<br/>Each phase builds on previous data"]:::synthesis
+    Domain -->|2. Start Orchestration| Orchestrator["Agent Orchestrator<br/>Executes agents in optimized sequence<br/>Each phase builds on previous data"]
 
     %% Phase 1: Discovery
-    Orchestrator -->|Phase 1| Discovery["Discovery Agent<br/>Finds basic company info first"]:::agent
+    Orchestrator -->|Phase 1| Discovery["Discovery Agent<br/>Finds basic company info first"]
     
-    Discovery -->|Parallel searches| DiscSearch["Parallel Searches:<br/>'Firecrawl company'<br/>'firecrawl.dev'<br/>'What is Firecrawl'"]:::search
+    Discovery -->|Parallel searches| DiscSearch["Parallel Searches:<br/>'Firecrawl company'<br/>'firecrawl.dev'<br/>'What is Firecrawl'"]
     
-    DiscSearch -->|Firecrawl API| DiscFC["3 concurrent API calls<br/>Returns company website & basic information"]:::firecrawl
+    DiscSearch -->|Firecrawl API| DiscFC["3 concurrent API calls<br/>Returns company website & basic information"]
     
-    DiscFC -->|Extracts| DiscData["Company: Firecrawl<br/>Website: firecrawl.dev<br/>Type: B2B SaaS"]:::source
+    DiscFC -->|Extracts| DiscData["Company: Firecrawl<br/>Website: firecrawl.dev<br/>Type: B2B SaaS"]
 
-    %% Phase 2: Company Profile (Industry)
-    DiscData -->|Phase 2| Profile["Company Profile Agent<br/>Uses company name from Phase 1<br/>to find industry details"]:::agent
+    %% Phase 2: Company Profile
+    DiscData -->|Phase 2| Profile["Company Profile Agent<br/>Uses company name from Phase 1<br/>to find industry details"]
     
-    Profile -->|Parallel searches| ProfSearch["Parallel Searches:<br/>'Firecrawl industry classification'<br/>'Firecrawl web scraping API'<br/>'Developer tools Firecrawl'"]:::search
+    Profile -->|Parallel searches| ProfSearch["Parallel Searches:<br/>'Firecrawl industry classification'<br/>'Firecrawl web scraping API'<br/>'Developer tools Firecrawl'"]
     
-    ProfSearch -->|Firecrawl API| ProfFC["3 concurrent API calls<br/>Searches industry-specific sources"]:::firecrawl
+    ProfSearch -->|Firecrawl API| ProfFC["3 concurrent API calls<br/>Searches industry-specific sources"]
     
-    ProfFC -->|Extracts| ProfData["Industry: Developer Tools<br/>Sub-category: Web Scraping APIs<br/>Market: B2B SaaS"]:::source
+    ProfFC -->|Extracts| ProfData["Industry: Developer Tools<br/>Sub-category: Web Scraping APIs<br/>Market: B2B SaaS"]
 
-    %% Phase 3: Financial (Funding)
-    ProfData -->|Phase 3| Funding["Financial Intel Agent<br/>Searches for funding using<br/>company + industry context"]:::agent
+    %% Phase 3: Financial
+    ProfData -->|Phase 3| Funding["Financial Intel Agent<br/>Searches for funding using<br/>company + industry context"]
     
-    Funding -->|Parallel searches| FundSearch["Parallel Searches:<br/>'Firecrawl funding rounds'<br/>'Mendable AI acquisition Firecrawl'<br/>'Firecrawl investors crunchbase'"]:::search
+    Funding -->|Parallel searches| FundSearch["Parallel Searches:<br/>'Firecrawl funding rounds'<br/>'Mendable AI acquisition Firecrawl'<br/>'Firecrawl investors crunchbase'"]
     
-    FundSearch -->|Firecrawl API| FundFC["3 concurrent API calls<br/>Checks TechCrunch, Crunchbase,<br/>venture news sites"]:::firecrawl
+    FundSearch -->|Firecrawl API| FundFC["3 concurrent API calls<br/>Checks TechCrunch, Crunchbase,<br/>venture news sites"]
     
-    FundFC -->|Extracts| FundData["Funding: Seed Stage<br/>Part of Mendable AI<br/>YC-backed company"]:::source
+    FundFC -->|Extracts| FundData["Funding: Seed Stage<br/>Part of Mendable AI<br/>YC-backed company"]
 
     %% Phase 4: Tech Stack
-    FundData -->|Phase 4| Tech["Tech Stack Agent<br/>Analyzes GitHub & tech docs<br/>+ HTML source analysis"]:::agent
+    FundData -->|Phase 4| Tech["Tech Stack Agent<br/>Analyzes GitHub & tech docs<br/>+ HTML source analysis"]
     
-    Tech -->|Parallel searches| TechSearch["Parallel Searches:<br/>'github.com/mendableai/firecrawl'<br/>'Firecrawl API documentation'<br/>Direct HTML analysis of firecrawl.dev"]:::search
+    Tech -->|Parallel searches| TechSearch["Parallel Searches:<br/>'github.com/mendableai/firecrawl'<br/>'Firecrawl API documentation'<br/>Direct HTML analysis of firecrawl.dev"]
     
-    TechSearch -->|Firecrawl API| TechFC["3 concurrent API calls<br/>+ HTML meta tag analysis<br/>+ GitHub repo scan"]:::firecrawl
+    TechSearch -->|Firecrawl API| TechFC["3 concurrent API calls<br/>+ HTML meta tag analysis<br/>+ GitHub repo scan"]
     
-    TechFC -->|Extracts| TechData["Tech Stack:<br/>Node.js, Python, Redis,<br/>Playwright, Kubernetes"]:::source
+    TechFC -->|Extracts| TechData["Tech Stack:<br/>Node.js, Python, Redis,<br/>Playwright, Kubernetes"]
 
-    %% Phase 5: General (CEO)
-    TechData -->|Phase 5| General["General Purpose Agent<br/>Handles custom field: CEO<br/>Uses all previous context"]:::agent
+    %% Phase 5: General
+    TechData -->|Phase 5| General["General Purpose Agent<br/>Handles custom field: CEO<br/>Uses all previous context"]
     
-    General -->|Targeted search| GenSearch["Focused Search:<br/>'Firecrawl CEO founder Eric'<br/>'Eric Ciarla Firecrawl'<br/>LinkedIn company search"]:::search
+    General -->|Targeted search| GenSearch["Focused Search:<br/>'Firecrawl CEO founder Eric'<br/>'Eric Ciarla Firecrawl'<br/>LinkedIn company search"]
     
-    GenSearch -->|Firecrawl API| GenFC["3 concurrent API calls<br/>Cross-references multiple sources"]:::firecrawl
+    GenSearch -->|Firecrawl API| GenFC["3 concurrent API calls<br/>Cross-references multiple sources"]
     
-    GenFC -->|Extracts| GenData["CEO: Eric Ciarla<br/>Co-founder & CEO of Firecrawl<br/>Previously at Mendable AI"]:::source
+    GenFC -->|Extracts| GenData["CEO: Eric Ciarla<br/>Co-founder & CEO of Firecrawl<br/>Previously at Mendable AI"]
 
     %% Final Synthesis
     DiscData --> Synthesis
@@ -129,27 +129,18 @@ graph TD
     TechData --> Synthesis
     GenData --> Synthesis
     
-    Synthesis["GPT-4o Final Synthesis<br/>Combines all agent findings<br/>Resolves conflicts, validates data"]:::synthesis
+    Synthesis["GPT-4o Final Synthesis<br/>Combines all agent findings<br/>Resolves conflicts, validates data"]
     
     Synthesis -->|Outputs| Results
     
     subgraph Results["Enriched Data"]
-        R1["Industry: Developer Tools / Web Scraping<br/>Source: firecrawl.dev/about"]:::good
-        R2["CEO: Eric Ciarla (Co-founder & CEO)<br/>Source: linkedin.com/company/firecrawl"]:::good
-        R3["Funding: Seed (Part of Mendable AI)<br/>Source: crunchbase.com"]:::good
-        R4["Tech Stack: Node.js, Python, Redis, K8s<br/>Source: github.com/mendableai/firecrawl"]:::good
+        R1["Industry: Developer Tools / Web Scraping<br/>Source: firecrawl.dev/about"]
+        R2["CEO: Eric Ciarla Co-founder & CEO<br/>Source: linkedin.com/company/firecrawl"]
+        R3["Funding: Seed Part of Mendable AI<br/>Source: crunchbase.com"]
+        R4["Tech Stack: Node.js, Python, Redis, K8s<br/>Source: github.com/mendableai/firecrawl"]
     end
     
-    Results -->|Final Output| Output["Updated CSV Row:<br/>ericciarla@firecrawl.dev<br/>→ Complete profile with<br/>4 new data points + sources"]:::answer
-    
-    classDef primary fill:#ff8c42,stroke:#ff6b1a,stroke-width:2px,color:#fff
-    classDef agent fill:#9c27b0,stroke:#7b1fa2,stroke-width:2px,color:#fff
-    classDef search fill:#e8e8e8,stroke:#999,stroke-width:2px,color:#333
-    classDef firecrawl fill:#ff6b1a,stroke:#ff4500,stroke-width:3px,color:#fff
-    classDef source fill:#ffa726,stroke:#ff8c42,stroke-width:2px,color:#000
-    classDef synthesis fill:#ff8c42,stroke:#ff6b1a,stroke-width:3px,color:#fff
-    classDef good fill:#f5f5f5,stroke:#666,stroke-width:1px,color:#000
-    classDef answer fill:#333,stroke:#000,stroke-width:3px,color:#fff
+    Results -->|Final Output| Output["Updated CSV Row:<br/>ericciarla@firecrawl.dev<br/>→ Complete profile with<br/>4 new data points + sources"]
 ```
 
 ### How Each Agent Works
