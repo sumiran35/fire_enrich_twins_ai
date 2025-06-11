@@ -9,7 +9,7 @@ Turn a simple list of emails into a rich dataset with company profiles, funding 
 ## Technologies
 
 - **Firecrawl**: Web scraping and content aggregation
-- **OpenAI GPT-4o**: Intelligent data extraction and synthesis
+- **OpenAI**: Intelligent data extraction and synthesis
 - **Next.js 15**: Modern React framework with App Router
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmendableai%2Ffire-enrich-standalone&env=FIRECRAWL_API_KEY,OPENAI_API_KEY&envDescription=API%20keys%20required%20for%20Fire%20Enrich&envLink=https%3A%2F%2Fgithub.com%2Fmendableai%2Ffire-enrich-standalone%23required-api-keys)

@@ -211,7 +211,7 @@ export default function HomePage() {
           className="font-medium flex items-center gap-2"
         >
           <a
-            href="https://github.com/mendableai/firecrawl/tree/main/examples"
+            href="https://github.com/mendableai/fire-enrich"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -303,10 +303,6 @@ export default function HomePage() {
           Powered by{' '}
           <Link href="https://www.firecrawl.dev" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-medium">
             Firecrawl
-          </Link>
-          {' and '}
-          <Link href="https://openai.com" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-medium">
-            OpenAI
           </Link>
         </p>
       </footer>
