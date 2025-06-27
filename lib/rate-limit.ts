@@ -6,9 +6,9 @@ import { NextRequest } from "next/server";
 export const getRateLimiter = (endpoint: string) => {
   // Check if we're in a production environment to apply rate limiting
   // In development, we don't want to be rate limited for testing
-  if (process.env.NODE_ENV !== "production" && !process.env.UPSTASH_REDIS_REST_URL) {
+
     return null;
-  }
+
 
   // Requires the following environment variables:
   // UPSTASH_REDIS_REST_URL
@@ -17,7 +17,7 @@ export const getRateLimiter = (endpoint: string) => {
 
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.fixedWindow(50, "1 d"),
+    limiter: Ratelimit.fixedWindow(10000000000, "1 d"),
     analytics: true,
     prefix: `ratelimit:${endpoint}`,
   });
