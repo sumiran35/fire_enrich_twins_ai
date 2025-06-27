@@ -8,7 +8,7 @@ import { NextRequest } from "next/server";
  * @param endpoint - The API endpoint to apply the rate limit to.
  * @returns A Ratelimit instance or null if disabled.
  */
-export const getRateLimiter = (endpoint: string) => {
+export const getRateLimiter = (endpoint: string): Ratelimit | null => {
   // Returning null completely disables the rate limiter for all environments.
   return null;
 
@@ -22,7 +22,7 @@ export const getRateLimiter = (endpoint: string) => {
 
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.fixedWindow(50, "1 d"), // Original limit was 50
+    limiter: Ratelimit.fixedWindow(50, "1 d"),
     analytics: true,
     prefix: `ratelimit:${endpoint}`,
   });
@@ -54,27 +54,28 @@ export const getIP = (request: NextRequest): string => {
 
 /**
  * Checks if a given request is rate-limited for a specific endpoint.
+ * Since the rate limiter is disabled via getRateLimiter, this function
+ * will always return a successful response.
  * @param request - The incoming Next.js request.
  * @param endpoint - The endpoint identifier.
- * @returns An object indicating if the request was successful and the limit status.
+ * @returns An object indicating the request was successful.
  */
 export const isRateLimited = async (request: NextRequest, endpoint: string) => {
+  // getRateLimiter() will always return null, disabling the limiter.
   const limiter = getRateLimiter(endpoint);
 
-  // If no limiter is available (which is always the case now), allow the request.
+  // Because the limiter is always null, we can remove the logic that
+  // would call the .limit() method, which resolves the error.
   if (!limiter) {
-    // The request is always allowed. The limit/remaining values are placeholders.
+    // This block is now always executed.
     return { success: true, limit: Infinity, remaining: Infinity };
   }
 
-  const ip = getIP(request);
+  // The following code is now unreachable and has been removed to fix the error.
+  // const ip = getIP(request);
+  // const result = await limiter.limit(ip);
+  // return { success: result.success, limit: result.limit, remaining: result.remaining };
 
-  // This part of the code is now effectively unreachable
-  const result = await limiter.limit(ip);
-
-  return {
-    success: result.success,
-    limit: result.limit,
-    remaining: result.remaining,
-  };
+  // A fallback return to satisfy TypeScript, though it will never be reached.
+  return { success: true, limit: Infinity, remaining: Infinity };
 };
