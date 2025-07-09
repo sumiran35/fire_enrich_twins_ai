@@ -1,14 +1,9 @@
 import axios from 'axios';
 
-// Ensure the API key is loaded from your .env.local file
-const APOLLO_API_KEY = process.env.APOLLO_API_KEY;
+// This is the base URL for the Apollo API
 const BASE_URL = 'https://api.apollo.io/v1';
 
-if (!APOLLO_API_KEY) {
-    throw new Error('Apollo API key is missing. Please set APOLLO_API_KEY in your environment variables.');
-}
-
-// Create a reusable Axios instance for Apollo
+// We create a reusable Axios instance here. This part is safe.
 const apolloApi = axios.create({
     baseURL: BASE_URL,
     headers: {
@@ -19,9 +14,9 @@ const apolloApi = axios.create({
 
 /**
  * Enriches a company's profile using its domain.
- * @param domain The domain of the company to enrich (e.g., "google.com").
+ * @param domain The domain of the company to enrich.
+ * @param apiKey The user-provided Apollo API key passed from the browser.
  * @returns The company's data from Apollo or null if not found.
- * @param apiKey ::::: DUH
  */
 export const enrichCompanyByDomain = async (domain: string, apiKey: string) => {
     // If the user somehow didn't provide a key, don't make the call.
@@ -31,8 +26,9 @@ export const enrichCompanyByDomain = async (domain: string, apiKey: string) => {
     }
 
     try {
+        // The API call only happens here, at runtime, using the user's key.
         const response = await apolloApi.post('/organizations/enrich', {
-            api_key: apiKey, // Use the key passed into the function
+            api_key: apiKey,
             domain: domain,
         });
         return response.data.organization;
