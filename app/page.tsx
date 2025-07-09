@@ -45,48 +45,27 @@ export default function HomePage() {
     columns: string[];
   } | null>(null);
 
+  // On initial load, populate state from localStorage if keys exist.
   useEffect(() => {
-    const checkEnvironment = async () => {
-      try {
-        const response = await fetch('/api/check-env');
-        if (!response.ok) {
-          throw new Error('Failed to check environment');
-        }
-        const data = await response.json();
-
-        if (!data.environmentStatus.FIRECRAWL_API_KEY) {
-          const savedKey = localStorage.getItem('firecrawl_api_key');
-          if (savedKey) setFirecrawlApiKey(savedKey);
-        }
-
-        if (!data.environmentStatus.OPENAI_API_KEY) {
-          const savedKey = localStorage.getItem('openai_api_key');
-          if (savedKey) setOpenaiApiKey(savedKey);
-        }
-
-        if (!data.environmentStatus.APOLLO_API_KEY) {
-          const savedKey = localStorage.getItem('apollo_api_key');
-          if (savedKey) setApolloApiKey(savedKey);
-        }
-
-      } catch (error) {
-        console.error('Error checking environment:', error);
-      } finally {
-        setIsCheckingEnv(false);
-      }
-    };
-
-    checkEnvironment();
+    setFirecrawlApiKey(localStorage.getItem('firecrawl_api_key') || '');
+    setOpenaiApiKey(localStorage.getItem('openai_api_key') || '');
+    setApolloApiKey(localStorage.getItem('apollo_api_key') || '');
+    setIsCheckingEnv(false);
   }, []);
 
   const handleCSVUpload = async (rows: CSVRow[], columns: string[]) => {
-    const response = await fetch('/api/check-env');
-    const data = await response.json();
-    const hasFirecrawl = data.environmentStatus.FIRECRAWL_API_KEY || localStorage.getItem('firecrawl_api_key');
-    const hasOpenAI = data.environmentStatus.OPENAI_API_KEY || localStorage.getItem('openai_api_key');
-    const hasApollo = data.environmentStatus.APOLLO_API_KEY || localStorage.getItem('apollo_api_key');
+    // For a public deployment, we primarily care about what's in localStorage.
+    const hasFirecrawl = !!localStorage.getItem('firecrawl_api_key');
+    const hasOpenAI = !!localStorage.getItem('openai_api_key');
+    const hasApollo = !!localStorage.getItem('apollo_api_key');
 
-    if (!hasFirecrawl || !hasOpenAI || !hasApollo) {
+    const areAllKeysPresent = hasFirecrawl && hasOpenAI && hasApollo;
+
+    if (areAllKeysPresent) {
+      setCsvData({ rows, columns });
+      setStep('setup');
+    } else {
+      // If any key is missing, show the modal and specify which ones.
       setPendingCSVData({ rows, columns });
       setMissingKeys({
         firecrawl: !hasFirecrawl,
@@ -94,9 +73,6 @@ export default function HomePage() {
         apollo: !hasApollo,
       });
       setShowApiKeyModal(true);
-    } else {
-      setCsvData({ rows, columns });
-      setStep('setup');
     }
   };
 
@@ -138,6 +114,7 @@ export default function HomePage() {
     setIsValidatingApiKey(true);
 
     try {
+      // We only validate the Firecrawl key as it's the easiest to check.
       if (missingKeys.firecrawl && firecrawlApiKey) {
         const response = await fetch('/api/scrape', {
           method: 'POST',
@@ -148,16 +125,12 @@ export default function HomePage() {
           body: JSON.stringify({ url: 'https://example.com' }),
         });
         if (!response.ok) throw new Error('Invalid Firecrawl API key');
-        localStorage.setItem('firecrawl_api_key', firecrawlApiKey);
       }
 
-      if (missingKeys.openai && openaiApiKey) {
-        localStorage.setItem('openai_api_key', openaiApiKey);
-      }
-
-      if (missingKeys.apollo && apolloApiKey) {
-        localStorage.setItem('apollo_api_key', apolloApiKey);
-      }
+      // If validation passes or wasn't needed, save all keys to localStorage.
+      if (firecrawlApiKey) localStorage.setItem('firecrawl_api_key', firecrawlApiKey);
+      if (openaiApiKey) localStorage.setItem('openai_api_key', openaiApiKey);
+      if (apolloApiKey) localStorage.setItem('apollo_api_key', apolloApiKey);
 
       toast.success('API keys saved successfully!');
       setShowApiKeyModal(false);
@@ -175,9 +148,6 @@ export default function HomePage() {
     }
   };
 
-  // =================================================================
-  // FIX APPLIED HERE: Define button content as a variable
-  // =================================================================
   let modalButtonContent: React.ReactNode;
   if (isValidatingApiKey) {
     modalButtonContent = (
