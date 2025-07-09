@@ -1,83 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { zodResponseFormat } from 'openai/helpers/zod';
-import { z } from 'zod';
-import { FieldGenerationResponse } from '@/lib/types/field-generation';
 
 export async function POST(request: NextRequest) {
+  // We will wrap the entire function in a try...catch block
   try {
     const { prompt } = await request.json();
 
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json(
-        { error: 'Prompt is required' },
-        { status: 400 }
+          { error: 'Prompt is required' },
+          { status: 400 }
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      // We are returning a more specific error message now
       return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
+          { error: 'The OPENAI_API_KEY environment variable is not set on the server.' },
+          { status: 500 }
       );
     }
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    const openai = new OpenAI({ apiKey });
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
-          content: `You are an expert at understanding data enrichment needs and converting natural language requests into structured field definitions.
-          
-          When the user describes what data they want to collect about companies, extract each distinct piece of information as a separate field.
-          
-          Guidelines:
-          - Use clear, professional field names (e.g., "Company Size" not "size")
-          - Provide helpful descriptions that explain what data should be found
-          - Choose appropriate data types:
-            - string: for text, URLs, descriptions
-            - number: for counts, amounts, years
-            - boolean: for yes/no questions
-            - array: for lists of items
-          - Include example values when helpful
-          - Common fields include: Company Name, Description, Industry, Employee Count, Founded Year, Headquarters Location, Website, Funding Amount, etc.`
+          content: `You are an expert at creating structured field definitions. Based on the user's request, generate a JSON object with two keys: "fields" (an array of objects, where each object has 'displayName', 'description', and 'type') and "interpretation" (a string explaining your choices).`
         },
         {
           role: 'user',
           content: prompt
         }
       ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'field_generation',
-          strict: true,
-          schema: zodResponseFormat(FieldGenerationResponse, 'field_generation').json_schema.schema
-        }
-      }
+      response_format: { type: 'json_object' },
     });
 
-    const message = completion.choices[0].message;
-    
-    if (!message.content) {
-      throw new Error('No response content');
+    const messageContent = completion.choices[0].message.content;
+
+    if (!messageContent) {
+      throw new Error('No response content from OpenAI');
     }
-    
-    const parsed = JSON.parse(message.content) as z.infer<typeof FieldGenerationResponse>;
+
+    const parsed = JSON.parse(messageContent);
 
     return NextResponse.json({
       success: true,
       data: parsed,
     });
+
   } catch (error) {
-    console.error('Field generation error:', error);
+    // --- THIS IS THE IMPORTANT PART ---
+    // We are now sending the detailed error back to the browser.
+    console.error('--- SERVER-SIDE ERROR ---', error);
     return NextResponse.json(
-      { error: 'Failed to generate fields' },
-      { status: 500 }
+        {
+          error: 'An unexpected error occurred on the server.',
+          // We include the actual error details in the response
+          details: {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          }
+        },
+        { status: 500 }
     );
   }
 }

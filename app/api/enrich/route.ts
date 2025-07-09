@@ -15,8 +15,8 @@ export async function POST(request: NextRequest) {
     const contentLength = request.headers.get('content-length');
     if (contentLength && parseInt(contentLength) > 5 * 1024 * 1024) { // 5MB limit
       return NextResponse.json(
-        { error: 'Request body too large' },
-        { status: 413 }
+          { error: 'Request body too large' },
+          { status: 413 }
       );
     }
 
@@ -25,22 +25,22 @@ export async function POST(request: NextRequest) {
 
     if (!rows || rows.length === 0) {
       return NextResponse.json(
-        { error: 'No rows provided' },
-        { status: 400 }
+          { error: 'No rows provided' },
+          { status: 400 }
       );
     }
 
     if (!fields || fields.length === 0 || fields.length > 10) {
       return NextResponse.json(
-        { error: 'Please provide 1-10 fields to enrich' },
-        { status: 400 }
+          { error: 'Please provide 1-10 fields to enrich' },
+          { status: 400 }
       );
     }
 
     if (!emailColumn) {
       return NextResponse.json(
-        { error: 'Email column is required' },
-        { status: 400 }
+          { error: 'Email column is required' },
+          { status: 400 }
       );
     }
 
@@ -52,25 +52,28 @@ export async function POST(request: NextRequest) {
     // Check environment variables and headers for API keys
     const openaiApiKey = process.env.OPENAI_API_KEY || request.headers.get('X-OpenAI-API-Key');
     const firecrawlApiKey = process.env.FIRECRAWL_API_KEY || request.headers.get('X-Firecrawl-API-Key');
-    
-    if (!openaiApiKey || !firecrawlApiKey) {
-      console.error('Missing API keys:', { 
-        hasOpenAI: !!openaiApiKey, 
-        hasFirecrawl: !!firecrawlApiKey 
+    const apolloApiKey = process.env.APOLLO_API_KEY || request.headers.get('X-Apollo-API-Key'); // Assuming you'll add this header
+
+    if (!openaiApiKey || !firecrawlApiKey || !apolloApiKey) {
+      console.error('Missing API keys:', {
+        hasOpenAI: !!openaiApiKey,
+        hasFirecrawl: !!firecrawlApiKey,
+        hasApollo: !!apolloApiKey
       });
       return NextResponse.json(
-        { error: 'Server configuration error: Missing API keys' },
-        { status: 500 }
+          { error: 'Server configuration error: Missing API keys' },
+          { status: 500 }
       );
     }
 
     // Always use the advanced agent architecture
     const strategyName = 'AgentEnrichmentStrategy';
-    
+
     console.log(`[STRATEGY] Using ${strategyName} - Advanced multi-agent architecture with specialized agents`);
     const enrichmentStrategy = new AgentEnrichmentStrategy(
-      openaiApiKey,
-      firecrawlApiKey
+        openaiApiKey,
+        firecrawlApiKey,
+        apolloApiKey
     );
 
     // Load skip list
@@ -83,35 +86,34 @@ export async function POST(request: NextRequest) {
         try {
           // Send session ID
           controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: 'session', sessionId })}\n\n`
-            )
+              encoder.encode(
+                  `data: ${JSON.stringify({ type: 'session', sessionId })}\n\n`
+              )
           );
 
           for (let i = 0; i < rows.length; i++) {
             // Check if cancelled
             if (abortController.signal.aborted) {
               controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({ type: 'cancelled' })}\n\n`
-                )
+                  encoder.encode(
+                      `data: ${JSON.stringify({ type: 'cancelled' })}\n\n`
+                  )
               );
               break;
             }
 
             const row = rows[i];
             const email = row[emailColumn];
-            
+
             // Add name to row context if nameColumn is provided
             if (nameColumn && row[nameColumn]) {
               row._name = row[nameColumn];
             }
-            
+
             // Check if email should be skipped
             if (email && shouldSkipEmail(email, skipList)) {
               const skipReason = getSkipReason(email, skipList);
-              
-              // Send skip result
+
               const skipResult: RowEnrichmentResult = {
                 rowIndex: i,
                 originalData: row,
@@ -119,80 +121,76 @@ export async function POST(request: NextRequest) {
                 status: 'skipped',
                 error: skipReason,
               };
-              
+
               controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({
-                    type: 'result',
-                    result: skipResult,
-                  })}\n\n`
-                )
+                  encoder.encode(
+                      `data: ${JSON.stringify({
+                        type: 'result',
+                        result: skipResult,
+                      })}\n\n`
+                  )
               );
-              
+
               continue; // Skip to next row
             }
-            
+
             // Send processing status
             controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({
-                  type: 'processing',
-                  rowIndex: i,
-                  totalRows: rows.length,
-                })}\n\n`
-              )
+                encoder.encode(
+                    `data: ${JSON.stringify({
+                      type: 'processing',
+                      rowIndex: i,
+                      totalRows: rows.length,
+                    })}\n\n`
+                )
             );
 
             try {
               // Enrich the row
               console.log(`[ENRICHMENT] Processing row ${i + 1}/${rows.length} - Email: ${email} - Strategy: ${strategyName}`);
               const startTime = Date.now();
-              
-              // Agent strategies return RowEnrichmentResult
+
               const result = await enrichmentStrategy.enrichRow(
-                row,
-                fields,
-                emailColumn,
-                undefined, // onProgress
-                (message: string, type: 'info' | 'success' | 'warning' | 'agent') => {
-                  // Stream agent progress messages
-                  controller.enqueue(
-                    encoder.encode(
-                      `data: ${JSON.stringify({
-                        type: 'agent_progress',
-                        rowIndex: i,
-                        message,
-                        messageType: type,
-                      })}\n\n`
-                    )
-                  );
-                }
+                  row,
+                  fields,
+                  emailColumn,
+                  undefined, // onProgress
+                  (message: string, type: 'info' | 'success' | 'warning' | 'agent') => {
+                    controller.enqueue(
+                        encoder.encode(
+                            `data: ${JSON.stringify({
+                              type: 'agent_progress',
+                              rowIndex: i,
+                              message,
+                              messageType: type,
+                            })}\n\n`
+                        )
+                    );
+                  }
               );
-              result.rowIndex = i; // Set the correct row index
-              
+              result.rowIndex = i;
+
               const duration = Date.now() - startTime;
               console.log(`[ENRICHMENT] Completed row ${i + 1} in ${duration}ms - Fields enriched: ${Object.keys(result.enrichments).length}`);
-              
-              // Log which fields were successfully enriched
+
               const enrichedFields = Object.entries(result.enrichments)
-                .filter(([, enrichment]) => enrichment.value)
-                .map(([fieldName, enrichment]) => `${fieldName}: ${enrichment.value ? '✓' : '✗'}`)
-                .join(', ');
+                  .filter(([, enrichment]) => enrichment && enrichment.value)
+                  .map(([fieldName, enrichment]: [string, RowEnrichmentResult['enrichments'][string]]) => `${fieldName}: ${enrichment.value ? '✓' : '✗'}`)
+                  .join(', ');
+
               if (enrichedFields) {
                 console.log(`[ENRICHMENT] Fields: ${enrichedFields}`);
               }
 
-              // Send result
               controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({
-                    type: 'result',
-                    result,
-                  })}\n\n`
-                )
+                  encoder.encode(
+                      `data: ${JSON.stringify({
+                        type: 'result',
+                        result,
+                      })}\n\n`
+                  )
               );
             } catch (error) {
-              // Send error for this row
               const errorResult: RowEnrichmentResult = {
                 rowIndex: i,
                 originalData: row,
@@ -202,33 +200,31 @@ export async function POST(request: NextRequest) {
               };
 
               controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({
-                    type: 'result',
-                    result: errorResult,
-                  })}\n\n`
-                )
+                  encoder.encode(
+                      `data: ${JSON.stringify({
+                        type: 'result',
+                        result: errorResult,
+                      })}\n\n`
+                  )
               );
             }
 
-            // Small delay between rows to prevent rate limiting
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
 
-          // Send completion
           controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: 'complete' })}\n\n`
-            )
+              encoder.encode(
+                  `data: ${JSON.stringify({ type: 'complete' })}\n\n`
+              )
           );
         } catch (error) {
           controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({
-                type: 'error',
-                error: error instanceof Error ? error.message : 'Unknown error',
-              })}\n\n`
-            )
+              encoder.encode(
+                  `data: ${JSON.stringify({
+                    type: 'error',
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                  })}\n\n`
+              )
           );
         } finally {
           activeSessions.delete(sessionId);
@@ -237,22 +233,26 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return new NextResponse(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
+    // =================================================================
+    // FIX APPLIED HERE
+    // =================================================================
+    // Create a new Headers object for type safety
+    const headers = new Headers();
+    headers.set('Content-Type', 'text/event-stream');
+    headers.set('Cache-Control', 'no-cache');
+    headers.set('Connection', 'keep-alive');
+
+    return new NextResponse(stream, { headers });
+
   } catch (error) {
     console.error('Failed to start enrichment:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to start enrichment',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      },
-      { status: 500 }
+        {
+          error: 'Failed to start enrichment',
+          details: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString()
+        },
+        { status: 500 }
     );
   }
 }
@@ -264,8 +264,8 @@ export async function DELETE(request: NextRequest) {
 
   if (!sessionId) {
     return NextResponse.json(
-      { error: 'Session ID required' },
-      { status: 400 }
+        { error: 'Session ID required' },
+        { status: 400 }
     );
   }
 
@@ -277,7 +277,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { error: 'Session not found' },
-    { status: 404 }
+      { error: 'Session not found' },
+      { status: 404 }
   );
 }
